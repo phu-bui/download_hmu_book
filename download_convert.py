@@ -2,7 +2,8 @@ import requests # to get image from the web
 import shutil # to save it locally
 import os
 from PIL import Image
-
+from flask import Flask, redirect, url_for, request, render_template
+app = Flask(__name__)
 
 def download_image(url, filename):
     r = requests.get(url, stream = True)
@@ -35,21 +36,50 @@ def save_image(maxpage, book_name, imageFolderUrl):
     except:
         return "Download Done!!!"
 
-def main(maxpage, book_name, imageFolderUrl):
-    save_image(maxpage, book_name, imageFolderUrl)
-    filename = f'{book_name}.pdf'
-    number_file = len(os.listdir(book_name))
-    image_list = []
-    image1 = Image.open(f'{book_name}/1.jpg')
-    image1.convert('RGB')
-    for i in range(2, number_file+1):
-        image = Image.open(f'{book_name}/{i}.jpg')
-        image.convert('RGB')
-        image_list.append(image)
-    image1.save(filename, save_all=True, append_images=image_list)
 
-    print('Done')
+@app.route('/')
+def home():
+    return render_template("home.html")
+
+@app.route('/success/<book_name>')
+def success(book_name):
+    return 'Congratulations on successfully downloading the book: %s' % book_name
+
+@app.route('/failed/<book_name>')
+def failed(book_name):
+    return 'Download the book: %s failed' % book_name
+
+@app.route('/download', methods=['POST'])
+def main():
+    if request.method == 'POST':
+        maxpage = request.form.get('maxpage')
+        book_name = request.form.get('book_name')
+        imageFolderUrl = request.form.get('imageFolderUrl')
+        try:
+            save_image(maxpage, book_name, imageFolderUrl)
+            filename = f'{book_name}.pdf'
+            number_file = len(os.listdir(book_name))
+            image_list = []
+            image1 = Image.open(f'{book_name}/1.jpg')
+            image1.convert('RGB')
+            for i in range(2, number_file+1):
+                image = Image.open(f'{book_name}/{i}.jpg')
+                image.convert('RGB')
+                image_list.append(image)
+            image1.save(filename, save_all=True, append_images=image_list)
+
+            return redirect(url_for('success', book_name=book_name))
+        except:
+            return redirect(url_for('failed', book_name=book_name))
+    else:
+        return redirect(url_for('/'))
 
 
+
+
+# main driver function
 if __name__ == '__main__':
-    main(149, 'chua_rang_noi_nha_2', 'http://thuvien.hmu.edu.vn/pages/cms/TempDir/books/205559b7-a16a-4584-bfb5-1d687d7d809e/2022/01/25/202201251559-d7ec760e-9a57-40aa-a88d-05769107c150/FullPreview')
+ 
+    # run() method of Flask class runs the application
+    # on the local development server.
+    app.run(host='127.0.0.1', port=5000)
